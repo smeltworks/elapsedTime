@@ -9,6 +9,11 @@ Toolchain note: c-next must be built from `main`; the released `cnext` 0.3.0 on
 PATH cannot transpile the library at all. The `main` build reproduces the
 committed `.c`/`.h` byte for byte, which is what these examples were built on.
 
+**2026-10-18:** `main` of this repo now needs C-Next 0.4.0 (#11), and this branch
+predates that migration as well as #9 and #10. Before rebuilding anything, merge
+`main` in, add `mut` to each example's timer and `ledOn` globals, and drop `const`
+(E0900, E0898).
+
 ## Build matrix
 
 | Platform | Framework | Canonical example | C-Next | C/C++ |
@@ -32,18 +37,22 @@ because `get_absolute_time()` returns a struct and `time_us_64()` a native u64.
 
 ---
 
-## Status — paused pending c-next v0.4.1 (as of 2026-09-20)
+## Status — paused pending c-next v0.4.1 (updated 2026-10-18)
 
-Investigating G1 traced its root cause upstream. Three c-next issues were filed
-from this survey, all milestoned **V0.4.1**:
+Investigating G1 traced its root cause upstream (2026-09-20). Re-checking G3 and
+G4 against c-next 0.4.0 and `main` (2026-10-18) found three more. Six c-next
+issues were filed from this survey, all milestoned **v0.4.1**:
 
-| Issue | What it covers |
-| --- | --- |
-| [c-next#1619](https://github.com/jlaustill/c-next/issues/1619) | **G1's root cause.** E0879 is silent for a scope-declared callback type across an include — exactly this library's shape — and for any function from a C header. C-Next should have rejected `tick: millis` at transpile time on every platform. |
-| [c-next#1618](https://github.com/jlaustill/c-next/issues/1618) | ADR-024 conversions enforced per-position: 6 of 10 positions leak, and every position leaks from a C source. Found while checking whether the ESP-IDF `now[0, 32]` adapter was actually required — it is correct, but nothing would have forced it. |
-| [c-next#1620](https://github.com/jlaustill/c-next/issues/1620) | Why neither surfaced: adr-matrix occupancy is per-ADR rather than per-diagnostic, so one rule greens a cell for every code an ADR declares. |
+| Issue | Gap | What it covers |
+| --- | --- | --- |
+| [c-next#1619](https://github.com/jlaustill/c-next/issues/1619) | G1 | **G1's root cause.** E0879 is silent for a scope-declared callback type across an include — exactly this library's shape — and for any function from a C header. The issue did not say what verdict `tick: millis` should get, so [a comment](https://github.com/jlaustill/c-next/issues/1619#issuecomment-6249021830) pins it: C type identity under the target's own compiler, the same verdict gcc gives. That rejects it on ESP32 with xtensa gcc 8.4 and accepts it on AVR, ARM, and ESP32 with gcc 13 or later (see G1). |
+| [c-next#1618](https://github.com/jlaustill/c-next/issues/1618) | G1 | ADR-024 conversions enforced per-position: 6 of 10 positions leak, and every position leaks from a C source. Found while checking whether the ESP-IDF `now[0, 32]` adapter was actually required — it is correct, but nothing would have forced it. |
+| [c-next#1620](https://github.com/jlaustill/c-next/issues/1620) | G1 | Why neither surfaced: adr-matrix occupancy is per-ADR rather than per-diagnostic, so one rule greens a cell for every code an ADR declares. |
+| [c-next#2151](https://github.com/jlaustill/c-next/issues/2151) | G3 | A consumer's run rewrites an included library's `.c` for the *consumer's* target, and writes a second header with a different include guard into the library's tree. |
+| [c-next#2153](https://github.com/jlaustill/c-next/issues/2153) | G4 | An include cycle in ESP-IDF's FreeRTOS headers makes the `-imacros` retry import `task.h`'s own include guard, so `task.h` reads as empty and `vTaskDelay` is E0422. |
+| [c-next#2154](https://github.com/jlaustill/c-next/issues/2154) | G4 | The `cnext --pio-install` hook fails before `pio run -t compiledb` can write `compile_commands.json`, so a fresh clone cannot create the database c-next reads framework headers from. |
 
-They join existing cards [#1523](https://github.com/jlaustill/c-next/issues/1523)
+The first three join existing cards [#1523](https://github.com/jlaustill/c-next/issues/1523)
 and [#1524](https://github.com/jlaustill/c-next/issues/1524), which already
 identified the missing interop axis from the tooling side; the repros here are
 the concrete failing cells those asked for. All five are cross-linked.
@@ -55,7 +64,15 @@ workaround is verified to clear G1 in both languages on real ESP32 builds
 (C++ alone; C-Next needs the G2 shim as well) — it is not committed, because
 this branch is a record of gaps rather than of workarounds.
 
-G2–G6 are independent of the upstream fix and can be worked at any time.
+The C++ examples never pass through c-next, so c-next#1619 can only catch G1 for
+C-Next consumers. The library needs its own answer either way: a wrapper in
+each sketch, or an optional Arduino clock adapter that keeps the declaration to
+one line (`tick: ArduinoClock.millis`). That choice is still parked until
+v0.4.1.
+
+G2 is an Arduino-core matter. G5 was addressed on `main` by #10 (a tick declares
+its range). G6's polling requirement is documented there, at once per *half*
+the tick's range rather than once per 2^32.
 
 ---
 
@@ -72,7 +89,8 @@ is target-dependent:
 | --- | --- | --- |
 | AVR | `long unsigned int` | compiles |
 | ARM (Teensy, STM32) | `long unsigned int` | compiles |
-| **Xtensa (ESP32)** | `unsigned int` | **fails** |
+| **Xtensa (ESP32), gcc 8.4.0** | `unsigned int` | **fails** |
+| Xtensa (ESP32), gcc 13.2.0 / 14.2.0 | `long unsigned int` | compiles |
 
 So AVR, ARM and Teensy pass by coincidence, not by design — the library's
 contract is with a fixed-width type, the Arduino contract is with
@@ -91,6 +109,15 @@ C++ — a hard error:
 
 For the fix pass: a wrapper resolves it but costs the one-line declaration that
 is the library's whole selling point, on the most popular 32-bit target.
+
+**Update 2026-10-18 — it depends on the toolchain, not only the target.** The
+failing row is xtensa gcc 8.4.0, which PlatformIO's `espressif32` platform
+(6.12.0) uses for the Arduino core (arduino-esp32 2.0.17). The same platform
+builds ESP-IDF with xtensa gcc 14.2.0, where `__UINT32_TYPE__` is
+`long unsigned int`, as it is in 13.2.0. With those toolchains `tick: millis`
+compiles. So G1 reproduces on the gcc 8.4 Arduino core, not on ESP32 as such.
+A newer toolchain clears it, but the library cannot depend on which one a user
+has.
 
 ## G2 — a `.cnx` main cannot supply `setup`/`loop` on ESP32
 
@@ -130,9 +157,49 @@ canonical copy in `include/`:
 `git status` then shows `?? src/ElapsedTime.h` after building any example. Every
 example build in this survey needed a manual `rm` afterwards.
 
+**Update 2026-10-18 — worse than a papercut; filed as
+[c-next#2151](https://github.com/jlaustill/c-next/issues/2151).** The consumer's
+run also rewrites the library's `.c` in the library's tree, for the *consumer's*
+target. That is invisible here only because elapsedTime's output is byte-identical
+on all 13 targets. A library with an `atomic` member is not: a Cortex-M4 consumer
+turned a host library's `.c` into one that includes `<cmsis_gcc.h>`, and the
+library's own build then failed. The stray header also carries a different include
+guard from the library's own.
+
 ## G4 — C-Next resolves Arduino and nothing else
 
 **Severity: high friction, affects every non-Arduino platform.**
+
+**Correction 2026-10-18 — the heading is wrong; this survey missed the compile
+database.** Since v0.2.18 (2026-07-10, c-next PR #1104), c-next reads include
+paths, defines and the compiler from the project's `compile_commands.json`. The
+table described below (now `src/cnx/TRANSPILE/1-Analyze/StdlibFunctions.ts`) is
+only a fallback. Re-checked on c-next `main` after `pio run -t compiledb`, with
+no framework path in `cnext.config.json`: the STM32 HAL example resolves every
+header. The ESP-IDF example does too once the xtensa toolchain is on `PATH`,
+because PlatformIO writes the compiler's bare name into the database. What
+survives of G4:
+
+- **The database cannot be bootstrapped:**
+  [c-next#2154](https://github.com/jlaustill/c-next/issues/2154). The
+  `cnext --pio-install` hook fails before `pio run -t compiledb` writes the
+  database. c-next's docs tell the reader to list every header directory in
+  `include` instead.
+- **`vTaskDelay` really is unresolvable, but not for the reason given below:**
+  [c-next#2153](https://github.com/jlaustill/c-next/issues/2153). The missing
+  `FreeRTOSConfig.h` was this config's fault; it lives in
+  `components/freertos/config/include/freertos/`, which was never listed. With
+  the database, an include cycle in ESP-IDF's FreeRTOS headers makes `task.h`
+  read as empty.
+- **`defines` is not a `cnext.config.json` key.** It exists only on the
+  programmatic API, and unknown config keys are dropped silently
+  ([c-next#1490](https://github.com/jlaustill/c-next/issues/1490), open).
+  `-D` on the command line and the database's `-D` flags both reach the
+  preprocessor, and the database's flags clear the HAL's device-select `#error`.
+- **The machine-specific paths are moot through the database.** In a
+  hand-written config only `~` expands; a `$HOME/...` entry is dropped.
+
+The original finding follows, as recorded on 2026-09-20.
 
 C-Next carries a hardcoded table (`src/TRANSPILE/1-Analyze/StdlibFunctions.ts`)
 mapping known C functions to headers. It covers the C standard library plus an
