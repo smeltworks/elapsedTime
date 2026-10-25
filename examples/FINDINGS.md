@@ -45,15 +45,15 @@ issues were filed from this survey, all milestoned **v0.4.1**:
 
 | Issue | Gap | What it covers |
 | --- | --- | --- |
-| [c-next#1619](https://github.com/jlaustill/c-next/issues/1619) | G1 | **G1's root cause.** E0879 is silent for a scope-declared callback type across an include — exactly this library's shape — and for any function from a C header. The issue did not say what verdict `tick: millis` should get, so [a comment](https://github.com/jlaustill/c-next/issues/1619#issuecomment-6249021830) pins it: C type identity under the target's own compiler, the same verdict gcc gives. That rejects it on ESP32 with xtensa gcc 8.4 and accepts it on AVR, ARM, and ESP32 with gcc 13 or later (see G1). |
-| [c-next#1618](https://github.com/jlaustill/c-next/issues/1618) | G1 | ADR-024 conversions enforced per-position: 6 of 10 positions leak, and every position leaks from a C source. Found while checking whether the ESP-IDF `now[0, 32]` adapter was actually required — it is correct, but nothing would have forced it. |
-| [c-next#1620](https://github.com/jlaustill/c-next/issues/1620) | G1 | Why neither surfaced: adr-matrix occupancy is per-ADR rather than per-diagnostic, so one rule greens a cell for every code an ADR declares. |
-| [c-next#2151](https://github.com/jlaustill/c-next/issues/2151) | G3 | A consumer's run rewrites an included library's `.c` for the *consumer's* target, and writes a second header with a different include guard into the library's tree. |
-| [c-next#2153](https://github.com/jlaustill/c-next/issues/2153) | G4 | An include cycle in ESP-IDF's FreeRTOS headers makes the `-imacros` retry import `task.h`'s own include guard, so `task.h` reads as empty and `vTaskDelay` is E0422. |
-| [c-next#2154](https://github.com/jlaustill/c-next/issues/2154) | G4 | The `cnext --pio-install` hook fails before `pio run -t compiledb` can write `compile_commands.json`, so a fresh clone cannot create the database c-next reads framework headers from. |
+| [c-next#1619](https://github.com/smeltworks/cnx/issues/1619) | G1 | **G1's root cause.** E0879 is silent for a scope-declared callback type across an include — exactly this library's shape — and for any function from a C header. The issue did not say what verdict `tick: millis` should get, so [a comment](https://github.com/smeltworks/cnx/issues/1619#issuecomment-6249021830) pins it: C type identity under the target's own compiler, the same verdict gcc gives. That rejects it on ESP32 with xtensa gcc 8.4 and accepts it on AVR, ARM, and ESP32 with gcc 13 or later (see G1). |
+| [c-next#1618](https://github.com/smeltworks/cnx/issues/1618) | G1 | ADR-024 conversions enforced per-position: 6 of 10 positions leak, and every position leaks from a C source. Found while checking whether the ESP-IDF `now[0, 32]` adapter was actually required — it is correct, but nothing would have forced it. |
+| [c-next#1620](https://github.com/smeltworks/cnx/issues/1620) | G1 | Why neither surfaced: adr-matrix occupancy is per-ADR rather than per-diagnostic, so one rule greens a cell for every code an ADR declares. |
+| [c-next#2151](https://github.com/smeltworks/cnx/issues/2151) | G3 | A consumer's run rewrites an included library's `.c` for the *consumer's* target, and writes a second header with a different include guard into the library's tree. |
+| [c-next#2153](https://github.com/smeltworks/cnx/issues/2153) | G4 | An include cycle in ESP-IDF's FreeRTOS headers makes the `-imacros` retry import `task.h`'s own include guard, so `task.h` reads as empty and `vTaskDelay` is E0422. |
+| [c-next#2154](https://github.com/smeltworks/cnx/issues/2154) | G4 | The `cnext --pio-install` hook fails before `pio run -t compiledb` can write `compile_commands.json`, so a fresh clone cannot create the database c-next reads framework headers from. |
 
-The first three join existing cards [#1523](https://github.com/jlaustill/c-next/issues/1523)
-and [#1524](https://github.com/jlaustill/c-next/issues/1524), which already
+The first three join existing cards [#1523](https://github.com/smeltworks/cnx/issues/1523)
+and [#1524](https://github.com/smeltworks/cnx/issues/1524), which already
 identified the missing interop axis from the tooling side; the repros here are
 the concrete failing cells those asked for. All five are cross-linked.
 
@@ -158,7 +158,7 @@ canonical copy in `include/`:
 example build in this survey needed a manual `rm` afterwards.
 
 **Update 2026-10-18 — worse than a papercut; filed as
-[c-next#2151](https://github.com/jlaustill/c-next/issues/2151).** The consumer's
+[c-next#2151](https://github.com/smeltworks/cnx/issues/2151).** The consumer's
 run also rewrites the library's `.c` in the library's tree, for the *consumer's*
 target. That is invisible here only because elapsedTime's output is byte-identical
 on all 13 targets. A library with an `atomic` member is not: a Cortex-M4 consumer
@@ -181,19 +181,19 @@ because PlatformIO writes the compiler's bare name into the database. What
 survives of G4:
 
 - **The database cannot be bootstrapped:**
-  [c-next#2154](https://github.com/jlaustill/c-next/issues/2154). The
+  [c-next#2154](https://github.com/smeltworks/cnx/issues/2154). The
   `cnext --pio-install` hook fails before `pio run -t compiledb` writes the
   database. c-next's docs tell the reader to list every header directory in
   `include` instead.
 - **`vTaskDelay` really is unresolvable, but not for the reason given below:**
-  [c-next#2153](https://github.com/jlaustill/c-next/issues/2153). The missing
+  [c-next#2153](https://github.com/smeltworks/cnx/issues/2153). The missing
   `FreeRTOSConfig.h` was this config's fault; it lives in
   `components/freertos/config/include/freertos/`, which was never listed. With
   the database, an include cycle in ESP-IDF's FreeRTOS headers makes `task.h`
   read as empty.
 - **`defines` is not a `cnext.config.json` key.** It exists only on the
   programmatic API, and unknown config keys are dropped silently
-  ([c-next#1490](https://github.com/jlaustill/c-next/issues/1490), open).
+  ([c-next#1490](https://github.com/smeltworks/cnx/issues/1490), open).
   `-D` on the command line and the database's `-D` flags both reach the
   preprocessor, and the database's flags clear the HAL's device-select `#error`.
 - **The machine-specific paths are moot through the database.** In a

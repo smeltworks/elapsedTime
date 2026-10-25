@@ -1,6 +1,6 @@
 # elapsedTime
 
-Portable, tick-agnostic elapsed-time timers for [C-Next](https://github.com/jlaustill/c-next) — the ergonomics behind Teensy's `elapsedMillis`, for **any MCU**, **any tick source**, and with **no 49.7-day ceiling**.
+Portable, tick-agnostic elapsed-time timers for [C-Next](https://github.com/smeltworks/cnx) — the ergonomics behind Teensy's `elapsedMillis`, for **any MCU**, **any tick source**, and with **no 49.7-day ceiling**.
 
 > **Status: implemented, 22/22 tests passing.** Requires a C-Next build from
 > `main`; the released `0.3.0` cannot transpile it — see
@@ -162,15 +162,15 @@ Firings land at 250, 500, 750. The same two statements in the other order drift 
 
 **C-Next from `main`.** The latest release, `0.3.0`, cannot transpile this library, and no release yet carries what it needs:
 
-- [c-next#1207](https://github.com/jlaustill/c-next/pull/1207) (merged after `0.3.0` was cut) — a function-as-type field in a scope-nested struct emitted no function-pointer typedef, so the generated C did not compile.
-- `tickSource` living *inside* the scope and referenced bare from `Timer` in that same scope. The header must emit `ElapsedTime__tickSource_fp`; earlier builds emitted a raw name that is not a type. Opened as [c-next#1281](https://github.com/jlaustill/c-next/pull/1281), which was closed unmerged after being blocked on [#1285](https://github.com/jlaustill/c-next/issues/1285); the fix reached `main` through that refactor instead.
+- [c-next#1207](https://github.com/smeltworks/cnx/pull/1207) (merged after `0.3.0` was cut) — a function-as-type field in a scope-nested struct emitted no function-pointer typedef, so the generated C did not compile.
+- `tickSource` living *inside* the scope and referenced bare from `Timer` in that same scope. The header must emit `ElapsedTime__tickSource_fp`; earlier builds emitted a raw name that is not a type. Opened as [c-next#1281](https://github.com/smeltworks/cnx/pull/1281), which was closed unmerged after being blocked on [#1285](https://github.com/smeltworks/cnx/issues/1285); the fix reached `main` through that refactor instead.
 
 The committed `.c`/`.h` were generated from `main`, and regenerating from `main` reproduces them byte for byte.
 
 Two further defects found while designing this shaped the API rather than blocking it:
 
-- [c-next#1202](https://github.com/jlaustill/c-next/issues/1202) — a global's initialiser must be a compile-time constant, so a timer cannot capture its clock where it is declared. This is why a timer seeds itself on first touch rather than through a builder.
-- [c-next#1215](https://github.com/jlaustill/c-next/issues/1215) — a callback-typed *scope member* without an explicit initialiser is rejected as uninitialised. Not hit here: the clock is a struct field, not a scope member.
+- [c-next#1202](https://github.com/smeltworks/cnx/issues/1202) — a global's initialiser must be a compile-time constant, so a timer cannot capture its clock where it is declared. This is why a timer seeds itself on first touch rather than through a builder.
+- [c-next#1215](https://github.com/smeltworks/cnx/issues/1215) — a callback-typed *scope member* without an explicit initialiser is rejected as uninitialised. Not hit here: the clock is a struct field, not a scope member.
 
 ## Testing
 
