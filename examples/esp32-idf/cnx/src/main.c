@@ -20,8 +20,8 @@
 
 // The adapter: a 64-bit clock narrowed to the u32 the library takes.
 uint32_t microseconds(void) {
-    int64_t now = esp_timer_get_time();
-    return (uint32_t)((now) & 0xFFFFFFFFULL);
+    const int64_t now = esp_timer_get_time();
+    return (uint32_t)((now) & 0xFFFFFFFFU);
 }
 
 ElapsedTime__Timer everySecond = { .dueEvery = 1000000U, .tick = microseconds };
@@ -29,9 +29,9 @@ ElapsedTime__Timer everySecond = { .dueEvery = 1000000U, .tick = microseconds };
 void app_main(void) {
     /* MISRA C:2012 Rule 14.3: infinite loop written as `for (;;)` for C-Next `forever` (`while (1)` has a controlling expression with an invariant value, which the rule forbids). */
     for (;;) {
-        bool due = ElapsedTime__isDue(&everySecond);
+        const bool due = ElapsedTime__isDue(&everySecond);
         if (due == true) {
-            uint64_t total = ElapsedTime__elapsed(&everySecond);
+            const uint64_t total = ElapsedTime__elapsed(&everySecond);
             (void)printf("tick, %llu us elapsed\n", total);
         }
     }

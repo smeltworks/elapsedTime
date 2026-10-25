@@ -1,5 +1,6 @@
 {
     "cppRequired": false,
+    "target": "esp32",
     "include": [
         "../../../src/",
         "/home/linux/.platformio/packages/framework-espidf/components/esp_timer/include/",

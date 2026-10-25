@@ -14,9 +14,6 @@
 extern "C" {
 #endif
 
-/* External type dependencies - include appropriate headers */
-typedef struct ElapsedTime__Timer ElapsedTime__Timer;
-
 /* External variables */
 extern const uint8_t LED_PIN;
 extern ElapsedTime__Timer blinkTimer;
