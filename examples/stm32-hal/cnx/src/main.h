@@ -12,9 +12,6 @@
 extern "C" {
 #endif
 
-/* External type dependencies - include appropriate headers */
-typedef struct ElapsedTime__Timer ElapsedTime__Timer;
-
 /* External variables */
 extern ElapsedTime__Timer blinkTimer;
 

@@ -26,7 +26,7 @@ void setup(void) {
 }
 
 void loop(void) {
-    bool due = ElapsedTime__isDue(&blinkTimer);
+    const bool due = ElapsedTime__isDue(&blinkTimer);
     if (due == true) {
         ledOn = !ledOn;
         digitalWrite(LED_PIN, ledOn);

@@ -2,9 +2,9 @@
 #include <Arduino.h>
 #include <ElapsedTime.cnx>
 
-ElapsedTime.Timer blinkTimer <- { dueEvery: 1000, tick: millis };
+mut ElapsedTime.Timer blinkTimer <- { dueEvery: 1000, tick: millis };
 
-bool ledOn <- false;
+mut bool ledOn <- false;
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);

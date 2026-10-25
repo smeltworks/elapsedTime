@@ -1,5 +1,6 @@
 {
     "cppRequired": false,
+    "target": "esp32",
     "include": ["../../../src/"],
     "noCache": true,
     "basePath": "src"

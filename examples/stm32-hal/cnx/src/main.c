@@ -17,7 +17,7 @@ int main(void) {
     (void)HAL_Init();
     /* MISRA C:2012 Rule 14.3: infinite loop written as `for (;;)` for C-Next `forever` (`while (1)` has a controlling expression with an invariant value, which the rule forbids). */
     for (;;) {
-        bool due = ElapsedTime__isDue(&blinkTimer);
+        const bool due = ElapsedTime__isDue(&blinkTimer);
         if (due == true) {
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         }
