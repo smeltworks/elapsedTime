@@ -6,11 +6,11 @@
 #include <Arduino.h>
 #include <ElapsedTime.cnx>
 
-const u8 LED_PIN <- 2;
+u8 LED_PIN <- 2;
 
-ElapsedTime.Timer blinkTimer <- { dueEvery: 1000, tick: millis };
+mut ElapsedTime.Timer blinkTimer <- { dueEvery: 1000, tick: millis };
 
-bool ledOn <- false;
+mut bool ledOn <- false;
 
 void setup() {
     pinMode(LED_PIN, OUTPUT);

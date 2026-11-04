@@ -3,7 +3,7 @@
 #include "stm32f4xx_hal.h"
 #include <ElapsedTime.cnx>
 
-ElapsedTime.Timer blinkTimer <- { dueEvery: 500, tick: HAL_GetTick };
+mut ElapsedTime.Timer blinkTimer <- { dueEvery: 500, tick: HAL_GetTick };
 
 void main() {
     (void) global.HAL_Init();

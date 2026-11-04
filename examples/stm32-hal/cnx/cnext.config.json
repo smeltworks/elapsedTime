@@ -1,5 +1,6 @@
 {
     "cppRequired": false,
+    "target": "stm32f4",
     "include": [
         "../../../src/",
         "/home/linux/.platformio/packages/framework-stm32cubef4/Drivers/STM32F4xx_HAL_Driver/Inc/",

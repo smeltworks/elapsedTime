@@ -3,3 +3,6 @@
 
 # ESP-IDF regenerates these per build.
 sdkconfig.*
+
+# PlatformIO compile databases (pio run -t compiledb); absolute, per machine.
+compile_commands.json

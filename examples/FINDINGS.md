@@ -5,14 +5,37 @@ against elapsedTime as a real `lib_deps` consumer. This file records what fought
 back. **No fixes in this pass** — the point is a list to work through before
 v1.0.0 is cut.
 
-Toolchain note: c-next must be built from `main`; the released `cnext` 0.3.0 on
-PATH cannot transpile the library at all. The `main` build reproduces the
-committed `.c`/`.h` byte for byte, which is what these examples were built on.
+Toolchain note: the survey (2026-09-20) was built with c-next from `main`,
+because the released 0.3.0 could not transpile the library.
 
-**2026-10-18:** `main` of this repo now needs C-Next 0.4.0 (#11), and this branch
-predates that migration as well as #9 and #10. Before rebuilding anything, merge
-`main` in, add `mut` to each example's timer and `ledOn` globals, and drop `const`
-(E0900, E0898).
+**2026-10-25: migrated to C-Next 0.4.0.** Each example's timer and `ledOn`
+globals are now `mut`, and `LED_PIN` lost its `const` (E0900, E0898). Every
+`.cnx` example transpiles on the released `cnext` 0.4.0 and the generated C is
+committed. To regenerate one:
+
+- **Name the target.** 0.4.0 refuses a program with no target (E0515), and
+  reading it from `platformio.ini` works only for boards its catalog names.
+  `teensy40` maps by name and `uno` through its `atmelavr` platform.
+  `esp32dev` and `nucleo_f401re` do not (E0510), so
+  those four examples set `"target"` in `cnext.config.json` (`esp32` or
+  `stm32f4`).
+- **Generate the compile database** for STM32 HAL and both ESP32 examples:
+  `pio run -t compiledb`. It is how c-next finds the framework's headers and
+  `-D` flags (see G4).
+- **ESP32 only: name the compiler.** The database names `xtensa-esp32-elf-gcc`
+  without a path, and PlatformIO keeps its toolchain off `PATH`, so set
+  `CNEXT_CROSS_COMPILER` to the compiler under
+  `~/.platformio/packages/` (`toolchain-xtensa-esp32` for the Arduino core,
+  `toolchain-xtensa-esp-elf` for ESP-IDF). Filed as
+  [c-next#2356](https://github.com/smeltworks/cnx/issues/2356); after the
+  rename (#2166) the variable is `CNX_CROSS_COMPILER`.
+- **Delete the stray `src/ElapsedTime.h`** each run leaves in the library (G3).
+
+The examples now take the library as `lib_deps = symlink://../../..`. With
+`file://`, PlatformIO copied the whole repo into each example's
+`.pio/libdeps`, ignoring `library.json`'s `export` list, and each copy held the
+other examples' `.pio` directories, copies included. Rebuilding all eleven one
+after another nested those copies to about 300 GB.
 
 ## Build matrix
 
@@ -25,9 +48,15 @@ predates that migration as well as #9 and #10. Before rebuilding anything, merge
 | STM32 Nucleo F401RE | arduino | `BlinkWithoutDelay` | **PASS** | not attempted |
 | Teensy 4.0 | arduino | `BlinkWithoutDelay` vs `elapsedMillis` | **PASS** | **PASS** |
 
-Where both variants built, they are the same size to the byte — AVR 30 B RAM /
-1072 B flash, Teensy 8116 B code. The abstraction costs nothing over the
-hand-written `previousMillis` original, in either language.
+All eleven builds re-run on 2026-10-25 against C-Next 0.4.0 give the same
+verdicts. ESP32 Arduino still fails as G1 and G2 record: in C++ with the
+`invalid conversion` error, and in C-Next with the `-Wincompatible-pointer-types`
+warning followed by `undefined reference to 'setup()'`.
+
+On AVR and Teensy, both variants are the same size to the byte — AVR 42 B RAM /
+1882 B flash, Teensy 8420 B code (0.4.0, 2026-10-25). The survey measured AVR
+30 B / 1072 B and Teensy 8116 B. The growth is #10's larger `Timer` (the tick's
+range fields and a `u64` firing mark), and it lands equally in both languages.
 
 Not attempted: Raspberry Pi Pico (SDK), Zephyr, bare FreeRTOS. Each would add
 another instance of a gap class already characterised below (G4 for header
@@ -37,11 +66,17 @@ because `get_absolute_time()` returns a struct and `time_us_64()` a native u64.
 
 ---
 
-## Status — paused pending c-next v0.4.1 (updated 2026-10-18)
+## Status — G1 waits on c-next v0.4.1 (updated 2026-10-25)
 
 Investigating G1 traced its root cause upstream (2026-09-20). Re-checking G3 and
 G4 against c-next 0.4.0 and `main` (2026-10-18) found three more. Six c-next
-issues were filed from this survey, all milestoned **v0.4.1**:
+issues were filed from this survey, all milestoned **v0.4.1**.
+
+**2026-10-25:** #1619, #1618 and #1620 are closed on c-next `main`
+(2026-10-23/24) but unreleased; v0.4.1 has not shipped. On 0.4.0, `tick: millis`
+still passes silently. Migrating to 0.4.0 added a seventh issue,
+[c-next#2356](https://github.com/smeltworks/cnx/issues/2356) (G4: the compile
+database's compiler is not found off `PATH`).
 
 | Issue | Gap | What it covers |
 | --- | --- | --- |
@@ -198,6 +233,12 @@ survives of G4:
   preprocessor, and the database's flags clear the HAL's device-select `#error`.
 - **The machine-specific paths are moot through the database.** In a
   hand-written config only `~` expands; a `$HOME/...` entry is dropped.
+- **The database's compiler is not found off `PATH`:**
+  [c-next#2356](https://github.com/smeltworks/cnx/issues/2356) (2026-10-25).
+  c-next takes the database's bare `xtensa-esp32-elf-g++` as written and says
+  it "is not installed", while `pio project metadata` reports its absolute path.
+  ARM and AVR escape only because a system `arm-none-eabi-gcc` and `avr-gcc`
+  happen to be on `PATH`.
 
 The original finding follows, as recorded on 2026-09-20.
 

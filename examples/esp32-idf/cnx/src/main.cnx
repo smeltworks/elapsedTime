@@ -14,7 +14,7 @@ u32 microseconds() {
     return now[0, 32];
 }
 
-ElapsedTime.Timer everySecond <- { dueEvery: 1000000, tick: microseconds };
+mut ElapsedTime.Timer everySecond <- { dueEvery: 1000000, tick: microseconds };
 
 void app_main() {
     forever {
